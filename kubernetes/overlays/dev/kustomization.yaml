@@ -21,11 +21,3 @@ patches:
           targetPort: http
           protocol: TCP
           nodePort: 30025
-  - target:
-      group: apps
-      version: v1
-      kind: Deployment
-    patch: |-
-      - op: add
-        path: /spec/strategy/type
-        value: Recreate

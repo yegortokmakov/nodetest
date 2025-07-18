@@ -9,6 +9,14 @@ build:
     useBuildkit: true
   artifacts:
     - image: ghcr.io/yegortokmakov/ghtoken_product_demo
+      sync:
+        manual:
+          - src: "pages/**/*.js"
+            dest: /app/pages
+          - src: "public/**/*"
+            dest: /app/public
+          - src: "styles/**/*.css"
+            dest: /app/styles
 
 deploy:
   kubectl: {}

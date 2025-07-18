@@ -3,26 +3,12 @@ kind: Deployment
 metadata:
   name: cloudfleet-node
 spec:
-  strategy:
-    type: RollingUpdate
   selector:
     matchLabels: {}
   template:
-    metadata:
-      annotations:
-        traffic.sidecar.istio.io/excludeOutboundPorts: "27017"
     spec:
-      serviceAccountName: cloudfleet-node
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                topologyKey: kubernetes.io/hostname
-                labelSelector:
-                  matchLabels: {}
       containers:
-        - name: cloudfleet-node
+        - name: nextjs-app
           image: ghcr.io/yegortokmakov/ghtoken_product_demo
           ports:
             - containerPort: 8080
@@ -34,16 +20,15 @@ spec:
             httpGet:
               path: /
               port: 8080
-            initialDelaySeconds: 5
+            initialDelaySeconds: 15
             periodSeconds: 5
           resources:
             requests:
               cpu: 50m
-              memory: 300Mi
+              memory: 200Mi
             limits:
-              cpu: 50m
+              cpu: 150m
               memory: 300Mi
-
       tolerations:
         - key: kubernetes.io/arch
           operator: Equal
