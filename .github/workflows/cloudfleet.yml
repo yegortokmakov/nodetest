@@ -15,15 +15,15 @@ on:
   # This creates an environment variable called `IMAGE_NAME ` with the value `ghtoken_product_demo`.
 env:
   IMAGE_NAME: ghtoken_product_demo
-#
+
 jobs:
-  # This pushes the image to GitHub Packages.
   push:
     runs-on: ubuntu-latest
+
     permissions:
       packages: write
       contents: read
-      #
+
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +32,7 @@ jobs:
 
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-        #
+
       - name: Push image
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
@@ -49,3 +49,26 @@ jobs:
           echo VERSION=$VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Install Cloudfleet CLI
+        env:
+          NONINTERACTIVE: 1
+        run: |
+          curl -fsSL https://downloads.cloudfleet.ai/apt/pubkey.gpg | tee /usr/share/keyrings/cloudfleet-archive-keyring.gpg >/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/cloudfleet-archive-keyring.gpg] https://downloads.cloudfleet.ai/apt stable main" | sudo tee /etc/apt/sources.list.d/cloudfleet.list
+          sudo apt update
+          sudo apt install cloudfleet
+
+      - name: Configure Cloudfleet CLI
+        run: cloudfleet auth add-profile token default ${{ vars.CLOUDFLEET_ORGANIZATION_ID }} ${{ vars.CLOUDFLEET_API_KEY }} ${{ secrets.CLOUDFLEET_API_SECRET }}
+
+      - name: Configure Kubeconfig
+        run: cloudfleet clusters kubeconfig ${{ vars.CLOUDFLEET_CLUSTER_ID }}
+
+      - uses: azure/setup-kubectl@v4
+        name: Setup kubectl
+
+      - run: kubectl cluster-info
