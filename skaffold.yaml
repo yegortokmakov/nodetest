@@ -8,7 +8,7 @@ build:
     push: false
     useBuildkit: true
   artifacts:
-    - image: ghcr.io/yegortokmakov/ghtoken_product_demo
+    - image: ghcr.io/yegortokmakov/nodetest
       sync:
         manual:
           - src: "pages/**/*.js"

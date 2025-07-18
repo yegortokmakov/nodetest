@@ -9,7 +9,7 @@ spec:
     spec:
       containers:
         - name: nextjs-app
-          image: ghcr.io/yegortokmakov/ghtoken_product_demo
+          image: ghcr.io/yegortokmakov/nodetest
           ports:
             - containerPort: 8080
               name: http
