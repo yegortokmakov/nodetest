@@ -12,9 +12,10 @@ on:
     tags:
       - v*
   pull_request:
-  # This creates an environment variable called `IMAGE_NAME ` with the value `ghtoken_product_demo`.
+
 env:
-  IMAGE_NAME: ghtoken_product_demo
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+  SKAFFOLD_PROFILE: production
 
 jobs:
   push:
@@ -27,28 +28,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build image
-        run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
-
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Push image
-        run: |
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern={{raw}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=,suffix=,format=long
+          flavor: |
+            latest=false
+            prefix=
+            suffix=
 
-          # This changes all uppercase characters to lowercase.
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          # This strips the git ref prefix from the version.
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          # This strips the "v" prefix from the tag name.
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          # This uses the Docker `latest` tag convention.
-          [ "$VERSION" == "main" ] && VERSION=latest
-          echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
-          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
-          docker push $IMAGE_ID:$VERSION
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Push image
+        uses: docker/build-push-action@v6
+        id: push
+        with:
+          push: true
+          context: ./
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: ""
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/arm64,linux/amd64
+          file: ./Dockerfile
 
       - name: Set up Kustomize
         uses: imranismail/setup-kustomize@v2
@@ -77,8 +94,7 @@ jobs:
         uses: imranismail/setup-kustomize@v2
 
       - uses: engineerd/configurator@v0.0.10
-        name: Set up Skaffold (x86_64)
-        if: runner.arch == 'X64'
+        name: Set up Skaffold
         with:
           name: skaffold
           fromGitHubReleases: true
@@ -87,16 +103,5 @@ jobs:
           version: v2.9.0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: engineerd/configurator@v0.0.10
-        name: Set up Skaffold (arm64)
-        if: runner.arch == 'ARM64'
-        with:
-          name: skaffold
-          fromGitHubReleases: true
-          repo: GoogleContainerTools/skaffold
-          urlTemplate: https://github.com/GoogleContainerTools/skaffold/releases/download/{{version}}/skaffold-linux-arm64
-          version: v2.9.0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Deploy the application using Skaffold
-        run: skaffold deploy --images=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME --tag=latest -p production
+        run: skaffold deploy --images=${{ env.IMAGE_NAME }} --tag=${{ github.sha }} -p ${{ env.SKAFFOLD_PROFILE }}
