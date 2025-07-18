@@ -1,0 +1,29 @@
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: cloudfleet-node
+
+build:
+  local:
+    push: false
+    useBuildkit: true
+  artifacts:
+    - image: ghcr.io/yegortokmakov/ghtoken_product_demo
+
+deploy:
+  kubectl: {}
+
+manifests:
+  kustomize:
+    paths:
+      - kubernetes/overlays/dev
+    buildArgs:
+      - --load-restrictor
+      - LoadRestrictionsNone
+
+profiles:
+  - name: production
+    manifests:
+      kustomize:
+        paths:
+          - kubernetes/overlays/production

@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: default
+
+patches:
+  - target:
+      version: v1
+      kind: Service
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: replace
+        path: /spec/ports/0
+        value:
+          port: 80
+          targetPort: http
+          protocol: TCP
+          nodePort: 30025
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/strategy/type
+        value: Recreate

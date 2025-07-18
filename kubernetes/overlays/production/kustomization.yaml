@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+    - ../../base
+    - virtualservice.yaml
+    - secret.yaml
+
+namespace: production
+components:
+    - ../../components/hpa
+    - ../../components/serviceentry
+    - ../../components/stability
+    - ../../components/tailscale
+
+configMapGenerator:
+    - name: api
+      envs:
+          - production.properties
+
+patches:
+    - path: tailscale-secret.yaml
+    - target:
+          group: apps
+          version: v1
+          kind: Deployment
+      patch: |-
+          - op: add
+            path: /spec/template/spec/containers/0/envFrom/-
+            value:
+              secretRef:
+                name: api
