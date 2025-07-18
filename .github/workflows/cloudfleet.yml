@@ -72,3 +72,31 @@ jobs:
         name: Setup kubectl
 
       - run: kubectl cluster-info
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - uses: engineerd/configurator@v0.0.10
+        name: Set up Skaffold (x86_64)
+        if: runner.arch == 'X64'
+        with:
+          name: skaffold
+          fromGitHubReleases: true
+          repo: GoogleContainerTools/skaffold
+          urlTemplate: https://github.com/GoogleContainerTools/skaffold/releases/download/{{version}}/skaffold-linux-amd64
+          version: v2.9.0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: engineerd/configurator@v0.0.10
+        name: Set up Skaffold (arm64)
+        if: runner.arch == 'ARM64'
+        with:
+          name: skaffold
+          fromGitHubReleases: true
+          repo: GoogleContainerTools/skaffold
+          urlTemplate: https://github.com/GoogleContainerTools/skaffold/releases/download/{{version}}/skaffold-linux-arm64
+          version: v2.9.0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy the application using Skaffold
+        run: skaffold deploy --images=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME --tag=latest -p production
